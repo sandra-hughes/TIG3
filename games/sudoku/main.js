@@ -12,6 +12,7 @@
   let notesMode = false;
   let undoStack = [];
   let timerHandle = null;
+  let paintDigit = 0;
   const els = {};
   function $(id) { return document.getElementById(id); }
 
@@ -79,14 +80,41 @@
       const b = document.createElement('button');
       b.className = 'pad-btn';
       b.textContent = n;
-      b.addEventListener('click', () => inputDigit(n));
+      b.dataset.pad = String(n);
+      b.addEventListener('click', () => onPadClick(n));
       pad.appendChild(b);
     }
     const erase = document.createElement('button');
     erase.className = 'pad-btn pad-erase';
     erase.textContent = '⌫';
-    erase.addEventListener('click', () => inputDigit(0));
+    erase.dataset.pad = 'erase';
+    erase.addEventListener('click', () => onPadClick(-1));
     pad.appendChild(erase);
+  }
+
+  function onPadClick(n) {
+    if (!state || state.paused || state.completed) return;
+    const wasActive = paintDigit === n;
+    paintDigit = wasActive ? 0 : n;
+    if (!wasActive && selected >= 0 && state.given[selected] === 0) {
+      applyPaint(n);
+    }
+    renderPadActive();
+    renderHighlights();
+  }
+
+  function applyPaint(n) {
+    if (n === -1) inputDigit(0);
+    else inputDigit(n);
+  }
+
+  function renderPadActive() {
+    const btns = els['digit-pad'].querySelectorAll('.pad-btn');
+    btns.forEach((b) => {
+      const v = b.dataset.pad;
+      const isActive = (v === 'erase' && paintDigit === -1) || (v !== 'erase' && parseInt(v, 10) === paintDigit);
+      b.classList.toggle('active', isActive);
+    });
   }
 
   function bindControls() {
@@ -166,6 +194,7 @@
       completed: false,
     };
     undoStack = [];
+    paintDigit = 0;
     selected = 40;
     bumpStat('started', difficulty);
     saveCurrent();
@@ -177,7 +206,11 @@
   function selectCell(idx) {
     if (state && state.paused) return;
     selected = idx;
-    renderHighlights();
+    if (paintDigit !== 0 && state && !state.completed && state.given[idx] === 0) {
+      applyPaint(paintDigit);
+    } else {
+      renderHighlights();
+    }
   }
 
   function inputDigit(n) {
@@ -405,17 +438,27 @@
   function renderHighlights() {
     const cells = els['grid'].children;
     for (let i = 0; i < 81; i++) {
-      cells[i].classList.remove('selected', 'peer', 'same-number', 'conflict');
+      cells[i].classList.remove('selected', 'peer', 'same-number', 'same-number-note', 'conflict');
+      const spans = cells[i].querySelectorAll('.cell-notes span');
+      spans.forEach((s) => s.classList.remove('highlight'));
     }
     if (!state) return;
     if (selected >= 0) {
       const r = idxToR(selected), c = idxToC(selected);
       for (const p of getPeers(r, c)) cells[p].classList.add('peer');
       cells[selected].classList.add('selected');
-      const v = state.board[selected];
-      if (v !== 0) {
-        for (let i = 0; i < 81; i++) {
-          if (i !== selected && state.board[i] === v) cells[i].classList.add('same-number');
+    }
+    let sameNum = 0;
+    if (selected >= 0 && state.board[selected] !== 0) sameNum = state.board[selected];
+    else if (paintDigit > 0) sameNum = paintDigit;
+    if (sameNum !== 0) {
+      for (let i = 0; i < 81; i++) {
+        if (i !== selected && state.board[i] === sameNum) {
+          cells[i].classList.add('same-number');
+        } else if (state.board[i] === 0 && state.notes[i].includes(sameNum)) {
+          cells[i].classList.add('same-number-note');
+          const spans = cells[i].querySelectorAll('.cell-notes span');
+          spans[sameNum - 1].classList.add('highlight');
         }
       }
     }

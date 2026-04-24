@@ -274,3 +274,25 @@ h1 {
   .legend { font-size: 0.66rem; }
   .overlay-card { padding: 24px 22px; }
 }
+
+/* Paint mode (sticky pad) + note highlights for same-number */
+.pad-btn.active {
+  background: rgba(255, 235, 59, 0.15);
+  color: var(--yellow);
+  border-color: var(--yellow);
+  text-shadow: 0 0 6px rgba(255, 235, 59, 0.6);
+  box-shadow: 0 0 8px rgba(255, 235, 59, 0.3);
+}
+.pad-btn.pad-erase.active {
+  background: rgba(255, 77, 210, 0.18);
+  color: var(--pink);
+  border-color: var(--pink);
+  text-shadow: 0 0 6px rgba(255, 77, 210, 0.6);
+  box-shadow: 0 0 8px rgba(255, 77, 210, 0.3);
+}
+.cell.same-number-note { background: rgba(255, 235, 59, 0.08); }
+.cell-notes span.highlight {
+  color: var(--yellow);
+  text-shadow: 0 0 4px rgba(255, 235, 59, 0.7);
+  font-weight: 700;
+}
