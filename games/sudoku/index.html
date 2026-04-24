@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sudoku · TIG3</title>
+<link rel="stylesheet" href="style.css" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50' font-size='52'%3E🧩%3C/text%3E%3C/svg%3E" />
+</head>
+<body>
+<a class="back" href="../../">← TIG3</a>
+<main class="sudoku-app">
+  <h1>Sudoku</h1>
+  <div class="hud">
+    <span><label for="btn-difficulty">Difficulty:</label>
+      <select id="btn-difficulty">
+        <option value="easy">Easy</option>
+        <option value="medium" selected>Medium</option>
+        <option value="hard">Hard</option>
+        <option value="expert">Expert</option>
+      </select>
+    </span>
+    <span>Time: <b id="hud-time">0:00</b></span>
+    <span>Errors: <b id="hud-errors">0</b></span>
+    <span>Hints: <b id="hud-hints">0</b></span>
+    <span>Best: <b id="hud-best">—</b></span>
+  </div>
+  <div id="grid" class="grid"></div>
+  <div id="digit-pad" class="digit-pad"></div>
+  <div class="actions">
+    <button id="btn-new">New (R)</button>
+    <button id="btn-undo">Undo (U)</button>
+    <button id="btn-hint">Hint (H)</button>
+    <button id="btn-notes">Notes: OFF (N)</button>
+    <button id="btn-pause">Pause (Esc)</button>
+  </div>
+  <div class="legend">
+    <code>1–9</code> fill · <code>⌫</code>/<code>0</code> clear · <code>arrows</code> move ·
+    <code>N</code> notes · <code>H</code> hint · <code>U</code> undo · <code>R</code> new · <code>Esc</code> pause<br />
+    Progress, best times and stats are saved in your browser.
+  </div>
+</main>
+<div id="overlay" class="overlay">
+  <div class="overlay-card">
+    <h2 id="overlay-title">TIG3 Sudoku</h2>
+    <p id="overlay-text">Pick a difficulty and start a new game.</p>
+    <button id="overlay-action">New game</button>
+  </div>
+</div>
+<div id="generating-overlay" class="generating-overlay">Generating…</div>
+<script src="sudoku.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
