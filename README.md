@@ -8,9 +8,23 @@ A hand-crafted collection of tiny browser games. Zero build step, pure HTML + Ca
 
 | Game | Genre | Status |
 |------|-------|--------|
-| [Neon Breakout](games/breakout/) | Arcade | 🟢 Playable |
+| [Neon Breakout](games/breakout/) | Arcade | 🟢 Playable · 5 levels · progress saved locally |
 
 More games coming — each lives in its own `games/<name>/` directory.
+
+## Controls (Neon Breakout)
+
+| Action | Key / Mouse |
+|--------|-------------|
+| Move paddle | mouse, or `←` / `→` |
+| Launch ball | `Space` or click |
+| Pause / resume | `P` |
+| Pick level (in menu) | `←` / `→` then `Space` |
+| Reset saved progress | `R` (asks for confirmation) |
+
+Cleared levels are saved in `localStorage` under `tig3.breakout.maxLevel`, so
+you can resume from your highest cleared level on the next visit. The level
+picker on the start screen lets you replay any earlier level.
 
 ## Architecture
 
