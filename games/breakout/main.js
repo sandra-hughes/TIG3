@@ -1,5 +1,8 @@
 // Neon Breakout — TIG3
-// Pure Canvas 2D, no deps. Keyboard + mouse. localStorage high score.
+// Pure Canvas 2D, no deps. Keyboard + mouse.
+// localStorage keys:
+//   tig3.breakout.best     — high score (int)
+//   tig3.breakout.maxLevel — highest cleared level (int). 0 = none.
 
 (() => {
   const canvas = document.getElementById('game');
@@ -11,12 +14,19 @@
   const elLives = document.getElementById('lives');
   const elLevel = document.getElementById('level');
   const elBest = document.getElementById('best');
+  const elBestLv = document.getElementById('best-lv');
   const overlay = document.getElementById('overlay');
   const overlayTitle = document.getElementById('overlay-title');
   const overlayText = document.getElementById('overlay-text');
   const startBtn = document.getElementById('start-btn');
+  const levelPicker = document.getElementById('level-picker');
+  const lvDown = document.getElementById('lv-down');
+  const lvUp = document.getElementById('lv-up');
+  const lvPick = document.getElementById('lv-pick');
+  const progressNote = document.getElementById('progress-note');
 
   const BEST_KEY = 'tig3.breakout.best';
+  const MAX_LEVEL_KEY = 'tig3.breakout.maxLevel';
   const COLORS = ['#00f0ff', '#ff4dd2', '#ffeb3b', '#7cff4d', '#ff9b4d'];
 
   const state = {
@@ -25,6 +35,8 @@
     lives: 3,
     level: 1,
     best: Number(localStorage.getItem(BEST_KEY) || 0),
+    maxCleared: Number(localStorage.getItem(MAX_LEVEL_KEY) || 0),
+    selectedStart: 1,
     paddle: { x: W / 2 - 60, y: H - 30, w: 120, h: 12, speed: 12 },
     ball: { x: W / 2, y: H - 50, r: 8, vx: 0, vy: 0, stuck: true },
     bricks: [],
@@ -33,7 +45,35 @@
     mouseX: null,
   };
 
+  // Default selection: resume at next unplayed level (or 1 if nothing cleared)
+  state.selectedStart = Math.max(1, state.maxCleared + 1);
+
   elBest.textContent = state.best;
+  elBestLv.textContent = state.maxCleared;
+
+  function maxStartLevel() { return state.maxCleared + 1; }
+
+  function renderMenuControls() {
+    const hasProgress = state.maxCleared >= 1;
+    levelPicker.hidden = !hasProgress;
+    progressNote.hidden = false;
+    if (hasProgress) {
+      const cap = maxStartLevel();
+      if (state.selectedStart < 1) state.selectedStart = 1;
+      if (state.selectedStart > cap) state.selectedStart = cap;
+      lvPick.textContent = 'Lv ' + state.selectedStart;
+      lvDown.disabled = state.selectedStart <= 1;
+      lvUp.disabled = state.selectedStart >= cap;
+      startBtn.textContent = (state.mode === 'dead' ? 'Retry' : 'Start') + ' · Lv ' + state.selectedStart;
+    } else {
+      startBtn.textContent = state.mode === 'dead' ? 'Try Again' : 'Start';
+    }
+  }
+
+  function hideMenuControls() {
+    levelPicker.hidden = true;
+    progressNote.hidden = true;
+  }
 
   function buildBricks(level) {
     const cols = 10;
@@ -77,10 +117,10 @@
     state.ball.stuck = false;
   }
 
-  function startGame() {
+  function startGame(startLevel) {
     state.score = 0;
     state.lives = 3;
-    state.level = 1;
+    state.level = Math.max(1, startLevel || 1);
     state.bricks = buildBricks(state.level);
     state.particles = [];
     resetBall();
@@ -94,7 +134,7 @@
     state.bricks = buildBricks(state.level);
     resetBall();
     state.mode = 'playing';
-    showOverlay('Level ' + state.level, 'Press <b>Space</b> or click to launch.');
+    showIntroOverlay('Level ' + state.level, 'Press <b>Space</b> or click to launch.');
     updateHUD();
   }
 
@@ -105,8 +145,14 @@
       elBest.textContent = state.best;
     }
     state.mode = 'dead';
-    showOverlay('Game Over', 'Final score: <b>' + state.score + '</b> · Best: <b>' + state.best + '</b>');
-    startBtn.textContent = 'Try Again';
+    state.selectedStart = Math.max(1, state.maxCleared + 1);
+    const progressLine = state.maxCleared >= 1
+      ? ' · Cleared up to <b>Lv ' + state.maxCleared + '</b>'
+      : '';
+    showMenuOverlay(
+      'Game Over',
+      'Final score: <b>' + state.score + '</b> · Best: <b>' + state.best + '</b>' + progressLine,
+    );
   }
 
   function winGame() {
@@ -115,14 +161,33 @@
       localStorage.setItem(BEST_KEY, state.best);
       elBest.textContent = state.best;
     }
+    if (state.level > state.maxCleared) {
+      state.maxCleared = state.level;
+      localStorage.setItem(MAX_LEVEL_KEY, state.maxCleared);
+      elBestLv.textContent = state.maxCleared;
+    }
     state.mode = 'win';
-    showOverlay('Cleared!', 'Level ' + state.level + ' done. Press <b>Space</b> for next level.');
+    showIntroOverlay(
+      'Level ' + state.level + ' Cleared!',
+      'Press <b>Space</b> for next level. Progress saved.',
+    );
   }
 
-  function showOverlay(title, text) {
+  // Overlay with full menu (start/retry + level picker + progress note).
+  function showMenuOverlay(title, text) {
     overlayTitle.innerHTML = title;
     overlayText.innerHTML = text;
     overlay.classList.remove('hidden');
+    renderMenuControls();
+  }
+
+  // Overlay with only Space-to-continue message (pause/win/level-intro).
+  function showIntroOverlay(title, text) {
+    overlayTitle.innerHTML = title;
+    overlayText.innerHTML = text;
+    overlay.classList.remove('hidden');
+    hideMenuControls();
+    startBtn.textContent = 'Continue';
   }
 
   function hideOverlay() { overlay.classList.add('hidden'); }
@@ -200,7 +265,6 @@
         gameOver();
       } else {
         resetBall();
-        state.mode = 'playing';
       }
     }
 
@@ -243,18 +307,28 @@
       ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(W, i); ctx.stroke();
     }
 
+    // Bricks: group by color so we change shadowColor/fillStyle less often.
+    const byColor = {};
     for (const brick of state.bricks) {
       if (!brick.alive) continue;
-      ctx.fillStyle = brick.color;
-      ctx.shadowBlur = 12;
-      ctx.shadowColor = brick.color;
-      ctx.fillRect(brick.x, brick.y, brick.w, brick.h);
-      if (brick.hp > 1) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.fillRect(brick.x + 2, brick.y + 2, brick.w - 4, 3);
+      if (!byColor[brick.color]) byColor[brick.color] = [];
+      byColor[brick.color].push(brick);
+    }
+    ctx.shadowBlur = 12;
+    for (const color in byColor) {
+      ctx.fillStyle = color;
+      ctx.shadowColor = color;
+      for (const brick of byColor[color]) {
+        ctx.fillRect(brick.x, brick.y, brick.w, brick.h);
       }
     }
     ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    for (const brick of state.bricks) {
+      if (brick.alive && brick.hp > 1) {
+        ctx.fillRect(brick.x + 2, brick.y + 2, brick.w - 4, 3);
+      }
+    }
 
     const p = state.paddle;
     ctx.fillStyle = '#ff4dd2';
@@ -288,23 +362,64 @@
     requestAnimationFrame(loop);
   }
 
+  function adjustSelectedStart(delta) {
+    if (state.mode !== 'menu' && state.mode !== 'dead') return;
+    if (state.maxCleared < 1) return;
+    state.selectedStart = Math.min(maxStartLevel(), Math.max(1, state.selectedStart + delta));
+    renderMenuControls();
+  }
+
+  function startFromOverlay() {
+    if (state.mode === 'win') { nextLevel(); return; }
+    if (state.mode === 'paused') { state.mode = 'playing'; hideOverlay(); return; }
+    if (state.mode === 'menu' || state.mode === 'dead') {
+      startGame(state.selectedStart);
+      return;
+    }
+    if (state.mode === 'playing') launchBall();
+  }
+
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowLeft') { state.keys.left = true; state.mouseX = null; }
-    if (e.key === 'ArrowRight') { state.keys.right = true; state.mouseX = null; }
+    if (e.key === 'ArrowLeft') {
+      if (state.mode === 'menu' || state.mode === 'dead') {
+        e.preventDefault();
+        adjustSelectedStart(-1);
+        return;
+      }
+      state.keys.left = true;
+      state.mouseX = null;
+    }
+    if (e.key === 'ArrowRight') {
+      if (state.mode === 'menu' || state.mode === 'dead') {
+        e.preventDefault();
+        adjustSelectedStart(1);
+        return;
+      }
+      state.keys.right = true;
+      state.mouseX = null;
+    }
     if (e.key === ' ') {
       e.preventDefault();
-      if (state.mode === 'menu' || state.mode === 'dead') startGame();
-      else if (state.mode === 'win') nextLevel();
-      else if (state.mode === 'playing') launchBall();
-      else if (state.mode === 'paused') { state.mode = 'playing'; hideOverlay(); }
+      startFromOverlay();
     }
     if (e.key === 'p' || e.key === 'P') {
       if (state.mode === 'playing') {
         state.mode = 'paused';
-        showOverlay('Paused', 'Press <b>P</b> or <b>Space</b> to resume.');
+        showIntroOverlay('Paused', 'Press <b>P</b> or <b>Space</b> to resume.');
       } else if (state.mode === 'paused') {
         state.mode = 'playing';
         hideOverlay();
+      }
+    }
+    if (e.key === 'r' || e.key === 'R') {
+      if (state.mode === 'menu' || state.mode === 'dead') {
+        if (state.maxCleared === 0) return;
+        if (!confirm('Reset cleared-level progress?')) return;
+        state.maxCleared = 0;
+        localStorage.removeItem(MAX_LEVEL_KEY);
+        elBestLv.textContent = 0;
+        state.selectedStart = 1;
+        renderMenuControls();
       }
     }
   });
@@ -325,10 +440,12 @@
     if (state.mode === 'playing' && state.ball.stuck) launchBall();
   });
 
-  startBtn.addEventListener('click', () => {
-    if (state.mode === 'win') nextLevel();
-    else startGame();
-  });
+  startBtn.addEventListener('click', startFromOverlay);
+  lvDown.addEventListener('click', () => adjustSelectedStart(-1));
+  lvUp.addEventListener('click', () => adjustSelectedStart(1));
+
+  // Initial menu render
+  renderMenuControls();
 
   loop();
 })();

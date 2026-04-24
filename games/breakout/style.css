@@ -107,6 +107,53 @@
 
 .overlay b { color: var(--pink); }
 
+.level-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 8px 16px;
+  background: rgba(0, 240, 255, 0.05);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: 4px;
+}
+
+.level-picker[hidden] { display: none; }
+
+.level-picker #lv-pick {
+  min-width: 72px;
+  text-align: center;
+  color: var(--cyan);
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-shadow: 0 0 4px rgba(0, 240, 255, 0.6);
+}
+
+.lv-btn {
+  background: transparent;
+  color: var(--cyan);
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  width: 32px;
+  height: 32px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.2s;
+  line-height: 1;
+  padding: 0;
+}
+
+.lv-btn:hover:not(:disabled) {
+  background: rgba(0, 240, 255, 0.1);
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+}
+
+.lv-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
 #start-btn {
   background: transparent;
   color: var(--cyan);
@@ -125,6 +172,16 @@
   background: rgba(0, 240, 255, 0.1);
   box-shadow: var(--glow-cyan);
 }
+
+.progress-note {
+  margin-top: 16px;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+  max-width: 420px;
+}
+
+.progress-note[hidden] { display: none; }
 
 .help {
   margin-top: 16px;

@@ -21,6 +21,7 @@
     <div><span class="hud-label">LIVES</span> <span id="lives">3</span></div>
     <div><span class="hud-label">LEVEL</span> <span id="level">1</span></div>
     <div><span class="hud-label">BEST</span> <span id="best">0</span></div>
+    <div><span class="hud-label">BEST LV</span> <span id="best-lv">0</span></div>
   </div>
 
   <div class="canvas-wrap">
@@ -28,12 +29,18 @@
     <div id="overlay" class="overlay">
       <h2 id="overlay-title">Neon Breakout</h2>
       <p id="overlay-text">Move the paddle with your <b>mouse</b> or <b>←/→ arrow keys</b>. Press <b>Space</b> to launch.</p>
+      <div id="level-picker" class="level-picker" hidden>
+        <button id="lv-down" class="lv-btn" type="button" aria-label="Previous level">◀</button>
+        <span id="lv-pick">Lv 1</span>
+        <button id="lv-up" class="lv-btn" type="button" aria-label="Next level">▶</button>
+      </div>
       <button id="start-btn">Start</button>
+      <p id="progress-note" class="progress-note">Cleared levels are saved automatically. Press <b>R</b> to reset progress.</p>
     </div>
   </div>
 
   <p class="help">
-    Controls: mouse / ← → / Space to launch / P to pause
+    Controls: mouse / ← → / Space to launch / P to pause / R to reset progress
   </p>
 </main>
 <script src="main.js"></script>
