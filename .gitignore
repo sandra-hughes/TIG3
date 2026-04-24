@@ -1,0 +1,8 @@
+.DS_Store
+*.swp
+*.log
+.env
+node_modules/
+*.bak
+.vscode/
+.idea/

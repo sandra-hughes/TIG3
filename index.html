@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TIG3 — Tiny Interactive Games</title>
+<link rel="stylesheet" href="style.css" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50' font-size='52'%3E🌸%3C/text%3E%3C/svg%3E" />
+</head>
+<body>
+<div class="stars"></div>
+<main class="landing">
+  <header>
+    <h1 class="glitch" data-text="TIG3">TIG3</h1>
+    <p class="subtitle">Tiny Interactive Games · vol.3</p>
+    <p class="tagline">Hand-crafted browser mini-games. No bundler, no dependencies, no nonsense.</p>
+  </header>
+
+  <section class="games">
+    <a class="card" href="games/breakout/">
+      <div class="card-thumb breakout-thumb">
+        <div class="brick b1"></div>
+        <div class="brick b2"></div>
+        <div class="brick b3"></div>
+        <div class="ball"></div>
+        <div class="paddle"></div>
+      </div>
+      <div class="card-body">
+        <h2>Neon Breakout</h2>
+        <p>Bust the glowing bricks. Paddle controlled by mouse or arrow keys.</p>
+        <div class="tags"><span>arcade</span><span>canvas</span><span>classic</span></div>
+      </div>
+    </a>
+
+    <div class="card card-placeholder">
+      <div class="card-thumb placeholder-thumb">
+        <span class="plus">+</span>
+      </div>
+      <div class="card-body">
+        <h2>Coming soon</h2>
+        <p>Next game is brewing. Check back after a few commits.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>
+      <a href="https://github.com/sandra-hughes/TIG3" target="_blank" rel="noopener">GitHub</a>
+      · <span id="build-date"></span>
+    </p>
+  </footer>
+</main>
+<script>
+  document.getElementById('build-date').textContent = 'build ' + new Date().toISOString().slice(0, 10);
+</script>
+</body>
+</html>
