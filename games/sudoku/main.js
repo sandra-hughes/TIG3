@@ -3,9 +3,11 @@
   const Lib = window.SudokuLib;
   const { rcToIdx, idxToR, idxToC, generatePuzzle, getConflicts, getPeers } = Lib;
 
-  const STORAGE_CURRENT = 'tig3.sudoku.current';
-  const STORAGE_STATS = 'tig3.sudoku.stats';
-  const bestKey = (d) => 'tig3.sudoku.best.' + d;
+  const Auth = window.TIG3Auth;
+  Auth.requireLogin();
+  const STORAGE_CURRENT = 'snapshot.sudoku';
+  const STORAGE_STATS = 'records.sudoku.stats';
+  const bestKey = (d) => 'sudoku.best.' + d;
 
   let state = null;
   let selected = -1;
@@ -36,12 +38,7 @@
       state.startedAt = null;
       els['btn-difficulty'].value = state.difficulty;
       renderAll();
-      showOverlay(
-        'Welcome back',
-        'Difficulty: ' + state.difficulty + ' · ' + formatTime(state.elapsedMs) + ' elapsed.',
-        'Resume',
-        'resume'
-      );
+      showRestoreCountdown();
     } else {
       showOverlay('TIG3 Sudoku', 'Pick a difficulty and start a new game.', 'New game', 'newgame');
     }
@@ -196,6 +193,7 @@
     undoStack = [];
     paintDigit = 0;
     selected = 40;
+    Auth.appendRecord('sudoku', 'start', { difficulty });
     bumpStat('started', difficulty);
     saveCurrent();
     startTimer();
@@ -364,14 +362,15 @@
     stopTimer();
     const elapsed = state.elapsedMs;
     const key = bestKey(state.difficulty);
-    const prevBest = parseInt(localStorage.getItem(key) || '0', 10);
+    const prevBest = Auth.getNumber(key, 0);
     let isBest = false;
     if (!prevBest || elapsed < prevBest) {
-      localStorage.setItem(key, String(elapsed));
+      Auth.setNumber(key, elapsed);
       isBest = true;
     }
+    Auth.appendRecord('sudoku', 'win', { difficulty: state.difficulty, elapsedMs: elapsed, errors: state.errors, hints: state.hints });
     bumpStat('won', state.difficulty);
-    localStorage.removeItem(STORAGE_CURRENT);
+    Auth.clearSnapshot('sudoku');
     els['grid'].classList.add('won');
     const summary =
       'Time: ' + formatTime(elapsed) +
@@ -384,10 +383,10 @@
 
   function bumpStat(field, difficulty) {
     let stats = {};
-    try { stats = JSON.parse(localStorage.getItem(STORAGE_STATS) || '{}'); } catch (e) {}
+    stats = Auth.read(STORAGE_STATS, {});
     if (!stats[difficulty]) stats[difficulty] = { started: 0, won: 0 };
     stats[difficulty][field] = (stats[difficulty][field] || 0) + 1;
-    localStorage.setItem(STORAGE_STATS, JSON.stringify(stats));
+    Auth.write(STORAGE_STATS, stats);
   }
 
   function saveCurrent() {
@@ -410,21 +409,21 @@
       paused: state.paused,
       completed: state.completed,
     };
-    try { localStorage.setItem(STORAGE_CURRENT, JSON.stringify(snap)); } catch (e) {}
+    Auth.saveSnapshot('sudoku', snap);
   }
 
   function loadCurrent() {
-    const raw = localStorage.getItem(STORAGE_CURRENT);
-    if (!raw) return null;
+    const wrapped = Auth.loadSnapshot('sudoku');
+    if (!wrapped) return null;
     try {
-      const snap = JSON.parse(raw);
+      const snap = wrapped.data;
       if (!isValidSnapshot(snap)) {
-        localStorage.removeItem(STORAGE_CURRENT);
+        Auth.clearSnapshot('sudoku');
         return null;
       }
       return snap;
     } catch (e) {
-      localStorage.removeItem(STORAGE_CURRENT);
+      Auth.clearSnapshot('sudoku');
       return null;
     }
   }
@@ -516,7 +515,7 @@
     els['hud-errors'].textContent = state ? state.errors : 0;
     els['hud-hints'].textContent = state ? state.hints : 0;
     const diff = state ? state.difficulty : els['btn-difficulty'].value;
-    const best = parseInt(localStorage.getItem(bestKey(diff)) || '0', 10);
+    const best = Auth.getNumber(bestKey(diff), 0);
     els['hud-best'].textContent = best ? formatTime(best) : '—';
   }
 
@@ -527,6 +526,21 @@
     const s = total % 60;
     if (h > 0) return h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
     return m + ':' + String(s).padStart(2, '0');
+  }
+
+  function showRestoreCountdown() {
+    let n = 3;
+    showOverlay('Restoring save', 'Resuming in ' + n + '…', 'Wait', 'countdown');
+    const id = setInterval(() => {
+      n -= 1;
+      if (n <= 0) {
+        clearInterval(id);
+        hideOverlay();
+        resume();
+      } else {
+        els['overlay-text'].textContent = 'Resuming in ' + n + '…';
+      }
+    }, 1000);
   }
 
   function showOverlay(title, text, action, mode) {

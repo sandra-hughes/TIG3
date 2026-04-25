@@ -25,8 +25,10 @@
   const lvPick = document.getElementById('lv-pick');
   const progressNote = document.getElementById('progress-note');
 
-  const BEST_KEY = 'tig3.breakout.best';
-  const MAX_LEVEL_KEY = 'tig3.breakout.maxLevel';
+  const Auth = window.TIG3Auth;
+  Auth.requireLogin();
+  const BEST_KEY = 'breakout.best';
+  const MAX_LEVEL_KEY = 'breakout.maxLevel';
   const COLORS = ['#00f0ff', '#ff4dd2', '#ffeb3b', '#7cff4d', '#ff9b4d'];
 
   const state = {
@@ -34,8 +36,8 @@
     score: 0,
     lives: 3,
     level: 1,
-    best: Number(localStorage.getItem(BEST_KEY) || 0),
-    maxCleared: Number(localStorage.getItem(MAX_LEVEL_KEY) || 0),
+    best: Auth.getNumber(BEST_KEY, 0),
+    maxCleared: Auth.getNumber(MAX_LEVEL_KEY, 0),
     selectedStart: 1,
     paddle: { x: W / 2 - 60, y: H - 30, w: 120, h: 12, speed: 12 },
     ball: { x: W / 2, y: H - 50, r: 8, vx: 0, vy: 0, stuck: true },
@@ -125,6 +127,8 @@
     state.particles = [];
     resetBall();
     state.mode = 'playing';
+    Auth.appendRecord('breakout', 'start', { level: state.level });
+    saveSnapshot();
     hideOverlay();
     updateHUD();
   }
@@ -141,7 +145,7 @@
   function gameOver() {
     if (state.score > state.best) {
       state.best = state.score;
-      localStorage.setItem(BEST_KEY, state.best);
+      Auth.setNumber(BEST_KEY, state.best);
       elBest.textContent = state.best;
     }
     state.mode = 'dead';
@@ -149,6 +153,8 @@
     const progressLine = state.maxCleared >= 1
       ? ' · Cleared up to <b>Lv ' + state.maxCleared + '</b>'
       : '';
+    Auth.appendRecord('breakout', 'game_over', { score: state.score, level: state.level, best: state.best });
+    Auth.clearSnapshot('breakout');
     showMenuOverlay(
       'Game Over',
       'Final score: <b>' + state.score + '</b> · Best: <b>' + state.best + '</b>' + progressLine,
@@ -158,15 +164,17 @@
   function winGame() {
     if (state.score > state.best) {
       state.best = state.score;
-      localStorage.setItem(BEST_KEY, state.best);
+      Auth.setNumber(BEST_KEY, state.best);
       elBest.textContent = state.best;
     }
     if (state.level > state.maxCleared) {
       state.maxCleared = state.level;
-      localStorage.setItem(MAX_LEVEL_KEY, state.maxCleared);
+      Auth.setNumber(MAX_LEVEL_KEY, state.maxCleared);
       elBestLv.textContent = state.maxCleared;
     }
     state.mode = 'win';
+    Auth.appendRecord('breakout', 'level_clear', { score: state.score, level: state.level, maxCleared: state.maxCleared });
+    saveSnapshot();
     showIntroOverlay(
       'Level ' + state.level + ' Cleared!',
       'Press <b>Space</b> for next level. Progress saved.',
@@ -196,6 +204,54 @@
     elScore.textContent = state.score;
     elLives.textContent = state.lives;
     elLevel.textContent = state.level;
+  }
+
+  function snapshotData() {
+    return {
+      mode: state.mode === 'dead' ? 'menu' : state.mode,
+      score: state.score, lives: state.lives, level: state.level, best: state.best,
+      maxCleared: state.maxCleared, selectedStart: state.selectedStart,
+      paddle: state.paddle, ball: state.ball, bricks: state.bricks, particles: state.particles,
+    };
+  }
+
+  function saveSnapshot() {
+    if (state.mode !== 'dead' && state.mode !== 'menu') Auth.saveSnapshot('breakout', snapshotData());
+  }
+
+  function restoreSnapshot(data) {
+    if (!data || !Array.isArray(data.bricks)) return false;
+    state.score = data.score || 0;
+    state.lives = data.lives || 3;
+    state.level = data.level || 1;
+    state.best = data.best || state.best;
+    state.maxCleared = data.maxCleared || state.maxCleared;
+    state.selectedStart = data.selectedStart || state.selectedStart;
+    state.paddle = data.paddle || state.paddle;
+    state.ball = data.ball || state.ball;
+    state.bricks = data.bricks;
+    state.particles = data.particles || [];
+    state.mode = 'paused';
+    updateHUD();
+    elBest.textContent = state.best;
+    elBestLv.textContent = state.maxCleared;
+    return true;
+  }
+
+  function resumeCountdown() {
+    let n = 3;
+    showIntroOverlay('Restoring save', 'Resuming in <b>' + n + '</b>…');
+    const id = setInterval(() => {
+      n -= 1;
+      if (n <= 0) {
+        clearInterval(id);
+        state.mode = 'playing';
+        hideOverlay();
+        saveSnapshot();
+      } else {
+        overlayText.innerHTML = 'Resuming in <b>' + n + '</b>…';
+      }
+    }, 1000);
   }
 
   function spawnParticles(x, y, color, count = 10) {
@@ -265,6 +321,7 @@
         gameOver();
       } else {
         resetBall();
+        saveSnapshot();
       }
     }
 
@@ -291,6 +348,8 @@
 
     if (state.bricks.every(br => !br.alive)) {
       winGame();
+    } else {
+      saveSnapshot();
     }
   }
 
@@ -416,7 +475,7 @@
         if (state.maxCleared === 0) return;
         if (!confirm('Reset cleared-level progress?')) return;
         state.maxCleared = 0;
-        localStorage.removeItem(MAX_LEVEL_KEY);
+        Auth.remove(MAX_LEVEL_KEY);
         elBestLv.textContent = 0;
         state.selectedStart = 1;
         renderMenuControls();
@@ -444,8 +503,14 @@
   lvDown.addEventListener('click', () => adjustSelectedStart(-1));
   lvUp.addEventListener('click', () => adjustSelectedStart(1));
 
-  // Initial menu render
-  renderMenuControls();
+  // Initial menu render / save restore
+  const savedRun = Auth.loadSnapshot('breakout');
+  if (savedRun && restoreSnapshot(savedRun.data)) {
+    resumeCountdown();
+  } else {
+    renderMenuControls();
+  }
+  window.addEventListener('beforeunload', saveSnapshot);
 
   loop();
 })();

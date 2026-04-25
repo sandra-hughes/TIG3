@@ -4,6 +4,18 @@ A hand-crafted collection of tiny browser games. Zero build step, pure HTML + Ca
 
 🎮 **Live demo:** https://tig3.hijirisubaru.dpdns.org/
 
+
+### Local profiles and saves
+
+TIG3 uses a browser-local profile login. No backend or password is required. Each player name gets separate `localStorage` data for:
+
+- game records and history
+- high scores / best times
+- current in-progress saves
+- level progress where the game has levels
+
+If a page is refreshed or closed during a game, the current run is saved and restored next time with a 3-second countdown before play resumes.
+
 ## Games
 
 | Game | Genre | Status |

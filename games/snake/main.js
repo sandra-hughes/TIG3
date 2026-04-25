@@ -17,7 +17,9 @@
   const overlayText = document.getElementById('overlay-text');
   const startBtn = document.getElementById('start-btn');
 
-  const BEST_KEY = 'tig3.snake.best';
+  const Auth = window.TIG3Auth;
+  Auth.requireLogin();
+  const BEST_KEY = 'snake.best';
   const DIRS = {
     up: { x: 0, y: -1 },
     down: { x: 0, y: 1 },
@@ -28,7 +30,7 @@
   const state = {
     mode: 'menu', // menu | playing | paused | dead
     score: 0,
-    best: Number(localStorage.getItem(BEST_KEY) || 0),
+    best: Auth.getNumber(BEST_KEY, 0),
     level: 1,
     speed: 1,
     snake: [],
@@ -65,6 +67,8 @@
     reset();
     state.mode = 'playing';
     state.lastStep = performance.now();
+    Auth.appendRecord('snake', 'start', { level: state.level });
+    saveSnapshot();
     hideOverlay();
   }
 
@@ -78,6 +82,7 @@
     if (state.mode !== 'paused') return;
     state.mode = 'playing';
     state.lastStep = performance.now();
+    saveSnapshot();
     hideOverlay();
   }
 
@@ -85,9 +90,11 @@
     state.mode = 'dead';
     if (state.score > state.best) {
       state.best = state.score;
-      localStorage.setItem(BEST_KEY, state.best);
+      Auth.setNumber(BEST_KEY, state.best);
       elBest.textContent = state.best;
     }
+    Auth.appendRecord('snake', 'game_over', { score: state.score, level: state.level, best: state.best });
+    Auth.clearSnapshot('snake');
     showOverlay(
       'Game Over',
       'Score: <b>' + state.score + '</b> · Best: <b>' + state.best + '</b> · Level: <b>' + state.level + '</b>',
@@ -110,6 +117,52 @@
   }
 
   function hideOverlay() { overlay.classList.add('hidden'); }
+
+  function snapshotData() {
+    return {
+      score: state.score, best: state.best, level: state.level, speed: state.speed,
+      snake: state.snake, food: state.food, dir: state.dir, nextDir: state.nextDir,
+      stepMs: state.stepMs, particles: state.particles, mode: state.mode === 'dead' ? 'menu' : state.mode,
+    };
+  }
+
+  function saveSnapshot() {
+    if (state.mode === 'playing' || state.mode === 'paused') Auth.saveSnapshot('snake', snapshotData());
+  }
+
+  function restoreSnapshot(data) {
+    if (!data || !Array.isArray(data.snake) || data.snake.length < 1) return false;
+    state.score = data.score || 0;
+    state.best = data.best || state.best;
+    state.level = data.level || 1;
+    state.speed = data.speed || 1;
+    state.snake = data.snake;
+    state.food = data.food || state.food;
+    state.dir = data.dir || DIRS.right;
+    state.nextDir = data.nextDir || state.dir;
+    state.stepMs = data.stepMs || 130;
+    state.particles = data.particles || [];
+    state.mode = 'paused';
+    updateHUD();
+    return true;
+  }
+
+  function resumeCountdown() {
+    let n = 3;
+    showOverlay('Restoring save', 'Resuming in <b>' + n + '</b>…', 'Wait');
+    const id = setInterval(() => {
+      n -= 1;
+      if (n <= 0) {
+        clearInterval(id);
+        state.mode = 'playing';
+        state.lastStep = performance.now();
+        hideOverlay();
+        saveSnapshot();
+      } else {
+        overlayText.innerHTML = 'Resuming in <b>' + n + '</b>…';
+      }
+    }, 1000);
+  }
 
   function isOccupied(x, y, ignoreTail = false) {
     const len = ignoreTail ? state.snake.length - 1 : state.snake.length;
@@ -163,6 +216,7 @@
       state.snake.pop();
     }
     updateHUD();
+    saveSnapshot();
   }
 
   function burst(x, y, color, count) {
@@ -243,6 +297,7 @@
         step();
       }
       tickParticles();
+      saveSnapshot();
     }
     draw();
     requestAnimationFrame(loop);
@@ -282,6 +337,12 @@
 
   startBtn.addEventListener('click', handleAction);
   reset();
-  showOverlay('Neon Snake', 'Eat glowing orbs, dodge your tail, and ride the speed-up waves. Use <b>arrow keys</b> or <b>WASD</b>.', 'Start');
+  const savedRun = Auth.loadSnapshot('snake');
+  if (savedRun && restoreSnapshot(savedRun.data)) {
+    resumeCountdown();
+  } else {
+    showOverlay('Neon Snake', 'Eat glowing orbs, dodge your tail, and ride the speed-up waves. Use <b>arrow keys</b> or <b>WASD</b>.', 'Start');
+  }
+  window.addEventListener('beforeunload', saveSnapshot);
   requestAnimationFrame(loop);
 })();
