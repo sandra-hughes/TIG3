@@ -1,9 +1,9 @@
 .game-wrap {
   position: relative;
   z-index: 1;
-  max-width: 680px;
+  max-width: 600px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 18px 24px;
 }
 
 .gamenav {
@@ -37,7 +37,8 @@
   background: var(--bg-soft);
   border: 1px solid rgba(0, 240, 255, 0.15);
   border-radius: 4px;
-  margin-bottom: 12px;
+  max-width: 520px;
+  margin: 0 auto 12px;
   font-size: 0.9rem;
   flex-wrap: wrap;
   justify-content: center;
@@ -56,6 +57,8 @@
 
 .canvas-wrap {
   position: relative;
+  max-width: 520px;
+  margin: 0 auto;
   background: #050510;
   border: 1px solid rgba(0, 240, 255, 0.25);
   border-radius: 4px;
