@@ -253,8 +253,9 @@
         }
       }
       state.board[idx] = n;
-      if (isError) state.errors++;
-      pushUndo({ type: 'fill', idx, before, after: n, sideEffects });
+      const errorDelta = isError ? 1 : 0;
+      if (errorDelta) state.errors += errorDelta;
+      pushUndo({ type: 'fill', idx, before, after: n, sideEffects, errorDelta });
     }
     saveCurrent();
     renderAll();
@@ -273,6 +274,7 @@
     if (e.type === 'fill') {
       state.board[e.idx] = e.before;
       if (e.sideEffects) for (const se of e.sideEffects) state.notes[se.idx] = se.before.slice();
+      if (e.errorDelta) state.errors = Math.max(0, state.errors - e.errorDelta);
     } else if (e.type === 'clear') {
       state.board[e.idx] = e.before;
     } else if (e.type === 'notes') {
@@ -414,7 +416,40 @@
   function loadCurrent() {
     const raw = localStorage.getItem(STORAGE_CURRENT);
     if (!raw) return null;
-    try { return JSON.parse(raw); } catch (e) { return null; }
+    try {
+      const snap = JSON.parse(raw);
+      if (!isValidSnapshot(snap)) {
+        localStorage.removeItem(STORAGE_CURRENT);
+        return null;
+      }
+      return snap;
+    } catch (e) {
+      localStorage.removeItem(STORAGE_CURRENT);
+      return null;
+    }
+  }
+
+  function isDigits81(value) {
+    return Array.isArray(value) && value.length === 81 && value.every((n) => Number.isInteger(n) && n >= 0 && n <= 9);
+  }
+
+  function isNotes81(value) {
+    return Array.isArray(value) && value.length === 81 && value.every((notes) => (
+      Array.isArray(notes) && notes.every((n) => Number.isInteger(n) && n >= 1 && n <= 9)
+    ));
+  }
+
+  function isValidSnapshot(snap) {
+    if (!snap || typeof snap !== 'object') return false;
+    if (!['easy', 'medium', 'hard', 'expert'].includes(snap.difficulty)) return false;
+    if (!isDigits81(snap.given) || !isDigits81(snap.board) || !isDigits81(snap.solution)) return false;
+    if (!isNotes81(snap.notes)) return false;
+    if (!Number.isFinite(snap.errors) || snap.errors < 0) return false;
+    if (!Number.isFinite(snap.hints) || snap.hints < 0) return false;
+    if (!Number.isFinite(snap.elapsedMs) || snap.elapsedMs < 0) return false;
+    if (typeof snap.paused !== 'boolean' || typeof snap.completed !== 'boolean') return false;
+    if (snap.startedAt !== null && !Number.isFinite(snap.startedAt)) return false;
+    return true;
   }
 
   function renderAll() { renderGrid(); renderHighlights(); renderHud(); }
