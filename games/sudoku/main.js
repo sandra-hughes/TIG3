@@ -38,7 +38,7 @@
       state.startedAt = null;
       els['btn-difficulty'].value = state.difficulty;
       renderAll();
-      showRestoreCountdown();
+      showRestorePrompt();
     } else {
       showOverlay('TIG3 Sudoku', 'Pick a difficulty and start a new game.', 'New game', 'newgame');
     }
@@ -122,7 +122,8 @@
     els['btn-pause'].addEventListener('click', togglePause);
     els['overlay-action'].addEventListener('click', () => {
       const mode = els['overlay'].dataset.mode;
-      if (mode === 'resume') { hideOverlay(); resume(); }
+      if (mode === 'restore') { showRestoreCountdown(); }
+      else if (mode === 'resume') { hideOverlay(); resume(); }
       else { promptNewGame(); }
     });
     els['btn-difficulty'].addEventListener('change', (e) => {
@@ -526,6 +527,10 @@
     const s = total % 60;
     if (h > 0) return h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
     return m + ':' + String(s).padStart(2, '0');
+  }
+
+  function showRestorePrompt() {
+    showOverlay('Saved game found', 'Click Restore to continue. A 3-second countdown will start first.', 'Restore', 'restore');
   }
 
   function showRestoreCountdown() {

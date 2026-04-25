@@ -238,6 +238,11 @@
     return true;
   }
 
+  function showRestorePrompt() {
+    state.mode = 'restore';
+    showIntroOverlay('Saved game found', 'Click <b>Continue</b> to restore. A 3-second countdown will start first.');
+  }
+
   function resumeCountdown() {
     let n = 3;
     showIntroOverlay('Restoring save', 'Resuming in <b>' + n + '</b>…');
@@ -429,8 +434,9 @@
   }
 
   function startFromOverlay() {
+    if (state.mode === 'restore') { resumeCountdown(); return; }
     if (state.mode === 'win') { nextLevel(); return; }
-    if (state.mode === 'paused') { state.mode = 'playing'; hideOverlay(); return; }
+    if (state.mode === 'paused') { state.mode = 'playing'; hideOverlay(); saveSnapshot(); return; }
     if (state.mode === 'menu' || state.mode === 'dead') {
       startGame(state.selectedStart);
       return;
@@ -467,10 +473,12 @@
     if (e.key === 'p' || e.key === 'P') {
       if (state.mode === 'playing') {
         state.mode = 'paused';
+        saveSnapshot();
         showIntroOverlay('Paused', 'Press <b>P</b> or <b>Space</b> to resume.');
       } else if (state.mode === 'paused') {
         state.mode = 'playing';
         hideOverlay();
+        saveSnapshot();
       }
     }
     if (e.key === 'r' || e.key === 'R') {
@@ -496,7 +504,16 @@
     state.mouseX = ((e.clientX - rect.left) / rect.width) * W;
   });
 
-  canvas.addEventListener('mouseleave', () => { state.mouseX = null; });
+  canvas.addEventListener('mouseleave', () => {
+    state.mouseX = null;
+    state.keys.left = false;
+    state.keys.right = false;
+    if (state.mode === 'playing') {
+      state.mode = 'paused';
+      saveSnapshot();
+      showIntroOverlay('Paused', 'Mouse left the game area. Click <b>Continue</b> to resume.');
+    }
+  });
 
   canvas.addEventListener('click', () => {
     if (state.mode === 'playing' && state.ball.stuck) launchBall();
@@ -509,7 +526,7 @@
   // Initial menu render / save restore
   const savedRun = Auth.loadSnapshot('breakout');
   if (savedRun && restoreSnapshot(savedRun.data)) {
-    resumeCountdown();
+    showRestorePrompt();
   } else {
     renderMenuControls();
   }

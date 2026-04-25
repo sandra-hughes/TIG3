@@ -14,7 +14,7 @@ TIG3 uses a browser-local profile login. No backend or password is required. Eac
 - current in-progress saves
 - level progress where the game has levels
 
-If a page is refreshed or closed during a game, the current run is saved and restored next time with a 3-second countdown before play resumes.
+If a page is refreshed or closed during a game, the current run is saved. Next time, the player confirms restore first, then a 3-second countdown runs before play resumes. Breakout and Snake also auto-pause when the pointer leaves the game area.
 
 ## Games
 

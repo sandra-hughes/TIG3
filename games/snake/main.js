@@ -72,10 +72,11 @@
     hideOverlay();
   }
 
-  function pause() {
+  function pause(message) {
     if (state.mode !== 'playing') return;
     state.mode = 'paused';
-    showOverlay('Paused', 'Press <b>Space</b> to resume.', 'Resume');
+    saveSnapshot();
+    showOverlay('Paused', message || 'Press <b>Space</b> to resume.', 'Resume');
   }
 
   function resume() {
@@ -142,9 +143,14 @@
     state.nextDir = data.nextDir || state.dir;
     state.stepMs = data.stepMs || 130;
     state.particles = data.particles || [];
-    state.mode = 'paused';
+    state.mode = 'restore';
     updateHUD();
     return true;
+  }
+
+  function showRestorePrompt() {
+    state.mode = 'restore';
+    showOverlay('Saved game found', 'Click <b>Restore</b> to continue. A 3-second countdown will start first.', 'Restore');
   }
 
   function resumeCountdown() {
@@ -304,6 +310,7 @@
   }
 
   function handleAction() {
+    if (state.mode === 'restore') { resumeCountdown(); return; }
     if (state.mode === 'playing') { pause(); return; }
     if (state.mode === 'paused') { resume(); return; }
     startGame();
@@ -335,11 +342,16 @@
     else setDir(dy > 0 ? DIRS.down : DIRS.up);
   });
 
+  canvas.addEventListener('pointerleave', () => {
+    state.touchStart = null;
+    if (state.mode === 'playing') pause('Mouse left the game area. Click <b>Resume</b> to continue.');
+  });
+
   startBtn.addEventListener('click', handleAction);
   reset();
   const savedRun = Auth.loadSnapshot('snake');
   if (savedRun && restoreSnapshot(savedRun.data)) {
-    resumeCountdown();
+    showRestorePrompt();
   } else {
     showOverlay('Neon Snake', 'Eat glowing orbs, dodge your tail, and ride the speed-up waves. Use <b>arrow keys</b> or <b>WASD</b>.', 'Start');
   }
