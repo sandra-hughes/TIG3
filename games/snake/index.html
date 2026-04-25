@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Neon Snake — TIG3</title>
+<link rel="stylesheet" href="../../style.css?v=20260425" />
+<link rel="stylesheet" href="style.css?v=20260425" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50' font-size='52'%3E🐍%3C/text%3E%3C/svg%3E" />
+</head>
+<body>
+<div class="stars"></div>
+<main class="game-wrap">
+  <nav class="gamenav">
+    <a href="../../">← back to TIG3</a>
+    <h1>Neon Snake</h1>
+  </nav>
+
+  <div class="hud">
+    <div><span class="hud-label">SCORE</span> <span id="score">0</span></div>
+    <div><span class="hud-label">BEST</span> <span id="best">0</span></div>
+    <div><span class="hud-label">LEVEL</span> <span id="level">1</span></div>
+    <div><span class="hud-label">SPEED</span> <span id="speed">1×</span></div>
+  </div>
+
+  <div class="canvas-wrap">
+    <canvas id="game" width="600" height="600"></canvas>
+    <div id="overlay" class="overlay">
+      <h2 id="overlay-title">Neon Snake</h2>
+      <p id="overlay-text">Eat glowing orbs, dodge your tail, and ride the speed-up waves. Use <b>arrow keys</b> or <b>WASD</b>.</p>
+      <button id="start-btn">Start</button>
+    </div>
+  </div>
+
+  <p class="help">
+    Controls: ↑ ↓ ← → / WASD / Space to start or pause / R to restart · Touch swipe works on mobile.
+  </p>
+</main>
+<script src="main.js?v=20260425"></script>
+</body>
+</html>

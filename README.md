@@ -10,6 +10,7 @@ A hand-crafted collection of tiny browser games. Zero build step, pure HTML + Ca
 |------|-------|--------|
 | [Neon Breakout](games/breakout/) | Arcade | 🟢 Playable · 5 levels · progress saved locally |
 | [Sudoku](games/sudoku/) | Logic | 🟢 Playable · 4 difficulties · notes / hints / undo · progress saved |
+| [Neon Snake](games/snake/) | Arcade | 🟢 Playable · keyboard / WASD / touch swipe · best score saved |
 
 More games coming — each lives in its own `games/<name>/` directory.
 
@@ -28,6 +29,17 @@ More games coming — each lives in its own `games/<name>/` directory.
 Cleared levels are saved in `localStorage` under `tig3.breakout.maxLevel`, so
 you can resume from your highest cleared level on the next visit. The level
 picker on the start screen lets you replay any earlier level.
+
+### Neon Snake
+
+| Action | Key / Touch |
+|--------|-------------|
+| Move | `←` `→` `↑` `↓`, or `WASD`, or swipe |
+| Start / pause / resume | `Space` or button |
+| Restart | `R` |
+
+Score is saved in `localStorage` under `tig3.snake.best`. The snake speeds up
+every 80 points, with level and speed shown in the HUD.
 
 ### Sudoku
 
@@ -62,10 +74,14 @@ TIG3/
 │   │   ├── index.html
 │   │   ├── main.js
 │   │   └── style.css
-│   └── sudoku/
+│   ├── sudoku/
+│   │   ├── index.html
+│   │   ├── sudoku.js    # pure logic (generate/solve/uniqueness)
+│   │   ├── main.js      # DOM glue (input/timer/persistence)
+│   │   └── style.css
+│   └── snake/
 │       ├── index.html
-│       ├── sudoku.js    # pure logic (generate/solve/uniqueness)
-│       ├── main.js      # DOM glue (input/timer/persistence)
+│       ├── main.js
 │       └── style.css
 └── README.md
 ```

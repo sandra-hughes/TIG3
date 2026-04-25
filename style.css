@@ -269,3 +269,39 @@ footer a:hover { text-shadow: var(--glow-cyan); }
 .sudoku-thumb .sudoku-mini span:nth-child(n+46):nth-child(-n+54) {
   border-bottom: 1px solid var(--cyan);
 }
+
+
+/* Snake card thumbnail (game3) */
+.snake-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #050510;
+}
+.snake-thumb .snake-mini {
+  display: grid;
+  grid-template-columns: repeat(5, 18px);
+  grid-template-rows: repeat(5, 18px);
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid rgba(0, 240, 255, 0.5);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.35);
+}
+.snake-thumb .snake-mini span {
+  border: 1px solid rgba(0, 240, 255, 0.08);
+  background: rgba(10, 10, 30, 0.7);
+  border-radius: 4px;
+}
+.snake-thumb .snake-mini .body {
+  background: var(--cyan);
+  box-shadow: var(--glow-cyan);
+}
+.snake-thumb .snake-mini .head {
+  background: var(--pink);
+  box-shadow: var(--glow-pink);
+}
+.snake-thumb .snake-mini .food {
+  background: var(--yellow);
+  box-shadow: 0 0 8px var(--yellow), 0 0 18px rgba(255, 235, 59, 0.5);
+  border-radius: 50%;
+}
