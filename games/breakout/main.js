@@ -435,7 +435,10 @@
       startGame(state.selectedStart);
       return;
     }
-    if (state.mode === 'playing') launchBall();
+    if (state.mode === 'playing') {
+      hideOverlay();
+      launchBall();
+    }
   }
 
   window.addEventListener('keydown', (e) => {
