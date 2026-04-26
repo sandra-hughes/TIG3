@@ -20,6 +20,9 @@
   const Auth = window.TIG3Auth;
   Auth.requireLogin();
   const BEST_KEY = 'snake.best';
+  const SNAPSHOT_SAVE_INTERVAL_MS = 1000;
+  let lastSnapshotSaveAt = 0;
+
   const DIRS = {
     up: { x: 0, y: -1 },
     down: { x: 0, y: 1 },
@@ -68,14 +71,14 @@
     state.mode = 'playing';
     state.lastStep = performance.now();
     Auth.appendRecord('snake', 'start', { level: state.level });
-    saveSnapshot();
+    saveSnapshotNow();
     hideOverlay();
   }
 
   function pause(message) {
     if (state.mode !== 'playing') return;
     state.mode = 'paused';
-    saveSnapshot();
+    saveSnapshotNow();
     showOverlay('Paused', message || 'Press <b>Space</b> to resume.', 'Resume');
   }
 
@@ -83,7 +86,7 @@
     if (state.mode !== 'paused') return;
     state.mode = 'playing';
     state.lastStep = performance.now();
-    saveSnapshot();
+    saveSnapshotNow();
     hideOverlay();
   }
 
@@ -127,9 +130,15 @@
     };
   }
 
-  function saveSnapshot() {
-    if (state.mode === 'playing' || state.mode === 'paused') Auth.saveSnapshot('snake', snapshotData());
+  function saveSnapshot(force = false) {
+    if (state.mode !== 'playing' && state.mode !== 'paused') return;
+    const now = performance.now();
+    if (!force && now - lastSnapshotSaveAt < SNAPSHOT_SAVE_INTERVAL_MS) return;
+    lastSnapshotSaveAt = now;
+    Auth.saveSnapshot('snake', snapshotData());
   }
+
+  function saveSnapshotNow() { saveSnapshot(true); }
 
   function restoreSnapshot(data) {
     if (!data || !Array.isArray(data.snake) || data.snake.length < 1) return false;
@@ -163,7 +172,7 @@
         state.mode = 'playing';
         state.lastStep = performance.now();
         hideOverlay();
-        saveSnapshot();
+        saveSnapshotNow();
       } else {
         overlayText.innerHTML = 'Resuming in <b>' + n + '</b>…';
       }
@@ -355,6 +364,9 @@
   } else {
     showOverlay('Neon Snake', 'Eat glowing orbs, dodge your tail, and ride the speed-up waves. Use <b>arrow keys</b> or <b>WASD</b>.', 'Start');
   }
-  window.addEventListener('beforeunload', saveSnapshot);
+  window.addEventListener('beforeunload', saveSnapshotNow);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) saveSnapshotNow();
+  });
   requestAnimationFrame(loop);
 })();

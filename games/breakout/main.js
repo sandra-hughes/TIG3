@@ -30,6 +30,8 @@
   const BEST_KEY = 'breakout.best';
   const MAX_LEVEL_KEY = 'breakout.maxLevel';
   const COLORS = ['#00f0ff', '#ff4dd2', '#ffeb3b', '#7cff4d', '#ff9b4d'];
+  const SNAPSHOT_SAVE_INTERVAL_MS = 1000;
+  let lastSnapshotSaveAt = 0;
 
   const state = {
     mode: 'menu', // menu | playing | paused | dead | win
@@ -128,7 +130,7 @@
     resetBall();
     state.mode = 'playing';
     Auth.appendRecord('breakout', 'start', { level: state.level });
-    saveSnapshot();
+    saveSnapshotNow();
     hideOverlay();
     updateHUD();
   }
@@ -174,7 +176,7 @@
     }
     state.mode = 'win';
     Auth.appendRecord('breakout', 'level_clear', { score: state.score, level: state.level, maxCleared: state.maxCleared });
-    saveSnapshot();
+    saveSnapshotNow();
     showIntroOverlay(
       'Level ' + state.level + ' Cleared!',
       'Press <b>Space</b> for next level. Progress saved.',
@@ -215,9 +217,15 @@
     };
   }
 
-  function saveSnapshot() {
-    if (state.mode !== 'dead' && state.mode !== 'menu') Auth.saveSnapshot('breakout', snapshotData());
+  function saveSnapshot(force = false) {
+    if (state.mode === 'dead' || state.mode === 'menu') return;
+    const now = performance.now();
+    if (!force && now - lastSnapshotSaveAt < SNAPSHOT_SAVE_INTERVAL_MS) return;
+    lastSnapshotSaveAt = now;
+    Auth.saveSnapshot('breakout', snapshotData());
   }
+
+  function saveSnapshotNow() { saveSnapshot(true); }
 
   function restoreSnapshot(data) {
     if (!data || !Array.isArray(data.bricks)) return false;
@@ -252,7 +260,7 @@
         clearInterval(id);
         state.mode = 'playing';
         hideOverlay();
-        saveSnapshot();
+        saveSnapshotNow();
       } else {
         overlayText.innerHTML = 'Resuming in <b>' + n + '</b>…';
       }
@@ -326,7 +334,7 @@
         gameOver();
       } else {
         resetBall();
-        saveSnapshot();
+        saveSnapshotNow();
       }
     }
 
@@ -436,7 +444,7 @@
   function startFromOverlay() {
     if (state.mode === 'restore') { resumeCountdown(); return; }
     if (state.mode === 'win') { nextLevel(); return; }
-    if (state.mode === 'paused') { state.mode = 'playing'; hideOverlay(); saveSnapshot(); return; }
+    if (state.mode === 'paused') { state.mode = 'playing'; hideOverlay(); saveSnapshotNow(); return; }
     if (state.mode === 'menu' || state.mode === 'dead') {
       startGame(state.selectedStart);
       return;
@@ -473,12 +481,12 @@
     if (e.key === 'p' || e.key === 'P') {
       if (state.mode === 'playing') {
         state.mode = 'paused';
-        saveSnapshot();
+        saveSnapshotNow();
         showIntroOverlay('Paused', 'Press <b>P</b> or <b>Space</b> to resume.');
       } else if (state.mode === 'paused') {
         state.mode = 'playing';
         hideOverlay();
-        saveSnapshot();
+        saveSnapshotNow();
       }
     }
     if (e.key === 'r' || e.key === 'R') {
@@ -510,7 +518,7 @@
     state.keys.right = false;
     if (state.mode === 'playing') {
       state.mode = 'paused';
-      saveSnapshot();
+      saveSnapshotNow();
       showIntroOverlay('Paused', 'Mouse left the game area. Click <b>Continue</b> to resume.');
     }
   });
@@ -530,7 +538,10 @@
   } else {
     renderMenuControls();
   }
-  window.addEventListener('beforeunload', saveSnapshot);
+  window.addEventListener('beforeunload', saveSnapshotNow);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) saveSnapshotNow();
+  });
 
   loop();
 })();
