@@ -227,18 +227,76 @@
 
   function saveSnapshotNow() { saveSnapshot(true); }
 
+  function isFiniteNumber(value, min = -Infinity, max = Infinity) {
+    return Number.isFinite(value) && value >= min && value <= max;
+  }
+
+  function isValidPaddle(paddle) {
+    return paddle &&
+      isFiniteNumber(paddle.x, -state.paddle.w, W) &&
+      isFiniteNumber(paddle.y, 0, H) &&
+      isFiniteNumber(paddle.w, 40, W) &&
+      isFiniteNumber(paddle.h, 6, 40) &&
+      isFiniteNumber(paddle.speed, 1, 40);
+  }
+
+  function isValidBall(ball) {
+    return ball &&
+      isFiniteNumber(ball.x, -50, W + 50) &&
+      isFiniteNumber(ball.y, -50, H + 50) &&
+      isFiniteNumber(ball.r, 2, 30) &&
+      isFiniteNumber(ball.vx, -50, 50) &&
+      isFiniteNumber(ball.vy, -50, 50) &&
+      typeof ball.stuck === 'boolean';
+  }
+
+  function isValidBrick(brick) {
+    return brick &&
+      isFiniteNumber(brick.x, -10, W + 10) &&
+      isFiniteNumber(brick.y, -10, H + 10) &&
+      isFiniteNumber(brick.w, 1, W) &&
+      isFiniteNumber(brick.h, 1, 80) &&
+      isFiniteNumber(brick.hp, 0, 10) &&
+      typeof brick.color === 'string' && brick.color.length <= 32 &&
+      typeof brick.alive === 'boolean';
+  }
+
+  function isValidParticle(particle) {
+    return particle &&
+      isFiniteNumber(particle.x, -100, W + 100) &&
+      isFiniteNumber(particle.y, -100, H + 100) &&
+      isFiniteNumber(particle.vx, -20, 20) &&
+      isFiniteNumber(particle.vy, -20, 20) &&
+      isFiniteNumber(particle.life, 0, 100) &&
+      typeof particle.color === 'string' && particle.color.length <= 32;
+  }
+
+  function isValidSnapshot(data) {
+    return data && typeof data === 'object' &&
+      isFiniteNumber(data.score, 0, 100000000) &&
+      isFiniteNumber(data.lives, 0, 10) &&
+      isFiniteNumber(data.level, 1, 999) &&
+      isFiniteNumber(data.best, 0, 100000000) &&
+      isFiniteNumber(data.maxCleared, 0, 999) &&
+      isFiniteNumber(data.selectedStart, 1, 1000) &&
+      isValidPaddle(data.paddle) &&
+      isValidBall(data.ball) &&
+      Array.isArray(data.bricks) && data.bricks.length <= 120 && data.bricks.every(isValidBrick) &&
+      Array.isArray(data.particles) && data.particles.length <= 300 && data.particles.every(isValidParticle);
+  }
+
   function restoreSnapshot(data) {
-    if (!data || !Array.isArray(data.bricks)) return false;
-    state.score = data.score || 0;
-    state.lives = data.lives || 3;
-    state.level = data.level || 1;
-    state.best = data.best || state.best;
-    state.maxCleared = data.maxCleared || state.maxCleared;
-    state.selectedStart = data.selectedStart || state.selectedStart;
-    state.paddle = data.paddle || state.paddle;
-    state.ball = data.ball || state.ball;
+    if (!isValidSnapshot(data)) return false;
+    state.score = data.score;
+    state.lives = data.lives;
+    state.level = data.level;
+    state.best = data.best;
+    state.maxCleared = data.maxCleared;
+    state.selectedStart = data.selectedStart;
+    state.paddle = data.paddle;
+    state.ball = data.ball;
     state.bricks = data.bricks;
-    state.particles = data.particles || [];
+    state.particles = data.particles;
     state.mode = 'paused';
     updateHUD();
     elBest.textContent = state.best;
@@ -536,6 +594,7 @@
   if (savedRun && restoreSnapshot(savedRun.data)) {
     showRestorePrompt();
   } else {
+    if (savedRun) Auth.clearSnapshot('breakout');
     renderMenuControls();
   }
   window.addEventListener('beforeunload', saveSnapshotNow);

@@ -140,18 +140,61 @@
 
   function saveSnapshotNow() { saveSnapshot(true); }
 
+  function isFiniteNumber(value, min = -Infinity, max = Infinity) {
+    return Number.isFinite(value) && value >= min && value <= max;
+  }
+
+  function isGridPoint(point) {
+    return point &&
+      Number.isInteger(point.x) && point.x >= 0 && point.x < GRID &&
+      Number.isInteger(point.y) && point.y >= 0 && point.y < GRID;
+  }
+
+  function isDirection(dir) {
+    return dir &&
+      ((dir.x === 0 && Math.abs(dir.y) === 1) || (dir.y === 0 && Math.abs(dir.x) === 1));
+  }
+
+  function isValidParticle(particle) {
+    return particle &&
+      isFiniteNumber(particle.x, -100, W + 100) &&
+      isFiniteNumber(particle.y, -100, H + 100) &&
+      isFiniteNumber(particle.vx, -20, 20) &&
+      isFiniteNumber(particle.vy, -20, 20) &&
+      isFiniteNumber(particle.life, 0, 100) &&
+      typeof particle.color === 'string' && particle.color.length <= 32;
+  }
+
+  function isValidSnapshot(data) {
+    if (!data || typeof data !== 'object') return false;
+    if (!isFiniteNumber(data.score, 0, 100000000) || !isFiniteNumber(data.best, 0, 100000000)) return false;
+    if (!isFiniteNumber(data.level, 1, 999) || !isFiniteNumber(data.speed, 0.5, 5)) return false;
+    if (!isFiniteNumber(data.stepMs, 30, 1000)) return false;
+    if (!isGridPoint(data.food) || !isDirection(data.dir) || !isDirection(data.nextDir)) return false;
+    if (!Array.isArray(data.snake) || data.snake.length < 1 || data.snake.length > GRID * GRID) return false;
+    const occupied = new Set();
+    for (const part of data.snake) {
+      if (!isGridPoint(part)) return false;
+      const key = part.x + ',' + part.y;
+      if (occupied.has(key)) return false;
+      occupied.add(key);
+    }
+    if (occupied.has(data.food.x + ',' + data.food.y)) return false;
+    return Array.isArray(data.particles) && data.particles.length <= 300 && data.particles.every(isValidParticle);
+  }
+
   function restoreSnapshot(data) {
-    if (!data || !Array.isArray(data.snake) || data.snake.length < 1) return false;
-    state.score = data.score || 0;
-    state.best = data.best || state.best;
-    state.level = data.level || 1;
-    state.speed = data.speed || 1;
+    if (!isValidSnapshot(data)) return false;
+    state.score = data.score;
+    state.best = data.best;
+    state.level = data.level;
+    state.speed = data.speed;
     state.snake = data.snake;
-    state.food = data.food || state.food;
-    state.dir = data.dir || DIRS.right;
-    state.nextDir = data.nextDir || state.dir;
-    state.stepMs = data.stepMs || 130;
-    state.particles = data.particles || [];
+    state.food = data.food;
+    state.dir = data.dir;
+    state.nextDir = data.nextDir;
+    state.stepMs = data.stepMs;
+    state.particles = data.particles;
     state.mode = 'restore';
     updateHUD();
     return true;
@@ -362,6 +405,7 @@
   if (savedRun && restoreSnapshot(savedRun.data)) {
     showRestorePrompt();
   } else {
+    if (savedRun) Auth.clearSnapshot('snake');
     showOverlay('Neon Snake', 'Eat glowing orbs, dodge your tail, and ride the speed-up waves. Use <b>arrow keys</b> or <b>WASD</b>.', 'Start');
   }
   window.addEventListener('beforeunload', saveSnapshotNow);
