@@ -3,8 +3,25 @@
   const CURRENT_KEY = 'tig3.auth.currentUser';
   const USER_PREFIX = 'tig3.user.';
   const PROFILE_PREFIX = 'tig3.profile.';
+  const PROFILE_NAME_PREFIX = 'tig3.profileName.';
 
-  function slug(name) {
+  const SafeStorage = {
+    get(key) {
+      try { return localStorage.getItem(key); }
+      catch (e) { return null; }
+    },
+    set(key, value) {
+      try { localStorage.setItem(key, value); return true; }
+      catch (e) { return false; }
+    },
+    remove(key) {
+      try { localStorage.removeItem(key); }
+      catch (e) {}
+    },
+  };
+
+  // Legacy only: old builds derived profile IDs from display names.
+  function legacySlug(name) {
     return String(name || '')
       .trim()
       .toLowerCase()
@@ -13,52 +30,86 @@
       .slice(0, 40) || 'player';
   }
 
+  function makeProfileId() {
+    const cryptoApi = globalThis.crypto;
+    if (cryptoApi && typeof cryptoApi.randomUUID === 'function') return 'p_' + cryptoApi.randomUUID();
+    const bytes = new Uint8Array(16);
+    if (cryptoApi && typeof cryptoApi.getRandomValues === 'function') cryptoApi.getRandomValues(bytes);
+    else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+    return 'p_' + Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  }
+
   function nowIso() { return new Date().toISOString(); }
-  function currentId() { return localStorage.getItem(CURRENT_KEY) || ''; }
+  function normalizeName(name) { return String(name || '').trim().slice(0, 32) || 'Player'; }
+  function nameIndexKey(name) { return PROFILE_NAME_PREFIX + encodeURIComponent(name.toLocaleLowerCase()); }
+  function currentId() { return SafeStorage.get(CURRENT_KEY) || ''; }
   function profileKey(id) { return PROFILE_PREFIX + id; }
   function scopedKey(key, id = currentId()) { return USER_PREFIX + id + '.' + key; }
 
+  function readJson(key, fallback = null) {
+    try {
+      const raw = SafeStorage.get(key);
+      return raw == null ? fallback : JSON.parse(raw);
+    } catch (e) { return fallback; }
+  }
+
+  function writeJson(key, value) {
+    return SafeStorage.set(key, JSON.stringify(value));
+  }
+
   function getProfile(id = currentId()) {
     if (!id) return null;
-    try { return JSON.parse(localStorage.getItem(profileKey(id)) || 'null'); }
-    catch (e) { return null; }
+    return readJson(profileKey(id), null);
+  }
+
+  function findProfileIdByName(cleanName) {
+    const indexed = SafeStorage.get(nameIndexKey(cleanName));
+    if (indexed && getProfile(indexed)) return indexed;
+
+    // Compatibility with profiles created before random IDs existed.
+    const legacyId = legacySlug(cleanName);
+    const legacyProfile = getProfile(legacyId);
+    if (legacyProfile && legacyProfile.name === cleanName) {
+      SafeStorage.set(nameIndexKey(cleanName), legacyId);
+      return legacyId;
+    }
+    return '';
   }
 
   function login(name) {
-    const cleanName = String(name || '').trim().slice(0, 32) || 'Player';
-    const id = slug(cleanName);
+    const cleanName = normalizeName(name);
+    const id = findProfileIdByName(cleanName) || makeProfileId();
     const existing = getProfile(id) || { id, name: cleanName, createdAt: nowIso(), games: {} };
+    existing.id = id;
     existing.name = cleanName;
     existing.lastLoginAt = nowIso();
-    localStorage.setItem(profileKey(id), JSON.stringify(existing));
-    localStorage.setItem(CURRENT_KEY, id);
+    writeJson(profileKey(id), existing);
+    SafeStorage.set(nameIndexKey(cleanName), id);
+    SafeStorage.set(CURRENT_KEY, id);
     return existing;
   }
 
   function logout() {
-    localStorage.removeItem(CURRENT_KEY);
+    SafeStorage.remove(CURRENT_KEY);
     location.href = location.pathname.includes('/games/') ? '../../' : './';
   }
 
   function read(key, fallback = null) {
     const id = currentId();
     if (!id) return fallback;
-    try {
-      const raw = localStorage.getItem(scopedKey(key, id));
-      return raw == null ? fallback : JSON.parse(raw);
-    } catch (e) { return fallback; }
+    return readJson(scopedKey(key, id), fallback);
   }
 
   function write(key, value) {
     const id = currentId();
-    if (!id) return;
-    localStorage.setItem(scopedKey(key, id), JSON.stringify(value));
+    if (!id) return false;
+    return writeJson(scopedKey(key, id), value);
   }
 
   function remove(key) {
     const id = currentId();
     if (!id) return;
-    localStorage.removeItem(scopedKey(key, id));
+    SafeStorage.remove(scopedKey(key, id));
   }
 
   function getNumber(key, fallback = 0) {
